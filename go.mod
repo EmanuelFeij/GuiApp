@@ -3,7 +3,7 @@ module github.com/EmanuelFeij/GuiApp
 go 1.15
 
 require (
-	fyne.io/fyne v1.4.3
+
 	fyne.io/fyne/v2 v2.0.1
 	github.com/PuerkitoBio/goquery v1.6.1 // indirect
 	github.com/antchfx/htmlquery v1.2.3 // indirect

@@ -26,6 +26,9 @@ var (
 	layout       TodoLayout
 	myApp        fyne.App
 	currentTasks []string
+	currentUser  string
+	userPhoto    fyne.Resource
+	mainContent  fyne.CanvasObject
 )
 
 // Everything Related to the Bottom Container
@@ -78,11 +81,11 @@ func loadUIbottom() *fyne.Container {
 
 func loadUIleft() *fyne.Container {
 
-	titleContainer := widget.NewCard("ToDos", "Here to Help you Achieve Everything", nil)
-
-	//titleContainer.Title = TextAlignCenter
-	// main leftContainer
-	leftContainer := container.NewVBox(titleContainer)
+	titleButton := widget.NewButton("ToDos", func() {})
+	subTitlesLabel := widget.NewLabel("Here to help you be Great")
+	titleButton.Alignment = widget.ButtonAlignCenter
+	subTitlesLabel.Alignment = fyne.TextAlignCenter
+	leftContainer := container.NewVBox(titleButton, subTitlesLabel, widget.NewSeparator())
 
 	//title left
 
@@ -94,30 +97,29 @@ func loadUIleft() *fyne.Container {
 			newWindow := myApp.NewWindow("Add a Todo")
 			newWindow.Resize(fyne.NewSize(300, 300))
 
-			var textArea *fyne.Container
-			entry := &widget.Entry{PlaceHolder: "Add a Day"}
-			textArea = container.NewVBox(
+			textArea := container.NewVBox()
+			newToolbar := widget.NewToolbar(
+				widget.NewToolbarSpacer(),
+				widget.NewToolbarAction(theme.ContentAddIcon(), func() {
+					widg := &widget.Entry{
+						PlaceHolder: "ToDo!",
+					}
 
-				widget.NewToolbar(
-					widget.NewToolbarAction(theme.ContentAddIcon(), func() {
-						widg := &widget.Entry{
-							PlaceHolder: "Add Todo!",
-						}
+					textArea.Add(widg)
 
-						textArea.Add(widg)
-
-					},
-					),
-				),
+				}),
 			)
+			textArea.Add(newToolbar)
+
+			entry := &widget.Entry{PlaceHolder: "Title"}
 
 			var title string
 			var todo []string
 
 			form := &widget.Form{
 				Items: []*widget.FormItem{
-					{Widget: entry},
-					{Widget: textArea},
+					{Text: "Add a Title", Widget: entry},
+					{Text: "ToDos to do!", Widget: textArea},
 				},
 
 				OnSubmit: func() {
@@ -141,6 +143,7 @@ func loadUIleft() *fyne.Container {
 			}
 
 			newWindow.SetContent(form)
+			newWindow.CenterOnScreen()
 			newWindow.Show()
 
 		}),
@@ -160,15 +163,19 @@ func loadUIleft() *fyne.Container {
 							for _, accItem := range acc.Items {
 								if accItem.Title == changed {
 									layout.leftContainer.Remove(item)
+									currentTasks = removeTaskFromSlice(currentTasks, accItem.Title)
+									layout.leftContainer.Refresh()
 								}
 							}
 						}
 					}
 					newWindow.Close()
+
 				},
 			)
 			removeContainer.Add(selectTodoToRemove)
 			newWindow.SetContent(removeContainer)
+			newWindow.CenterOnScreen()
 			newWindow.Show()
 
 		}),
@@ -179,12 +186,21 @@ func loadUIleft() *fyne.Container {
 	return leftContainer
 }
 
+func removeTaskFromSlice(s []string, task string) []string {
+	for i, t := range s {
+		if task == t {
+			s = append(s[:i], s[i+1:]...)
+		}
+	}
+	return s
+}
 func removeEmptyAccordions() {
 	for _, lObject := range layout.leftContainer.Objects {
 		acc, ok := lObject.(*widget.Accordion)
 		if ok {
 
 			for _, accItem := range acc.Items {
+				currentTasks = removeTaskFromSlice(currentTasks, accItem.Title)
 				isContainer, ok := accItem.Detail.(*fyne.Container)
 				if ok && len(isContainer.Objects) == 0 {
 					layout.leftContainer.Remove(acc)
@@ -242,8 +258,19 @@ func NewTodo(title string, todos []string) *widget.Accordion {
 	return widget.NewAccordion(widget.NewAccordionItem(title, checkContainer))
 }
 func loadUIright() *fyne.Container {
-
-	return container.NewVBox(widget.NewCard("ToDosDone", "Great Work", nil))
+	but := &widget.Button{
+		Text:     "ToDos Done",
+		OnTapped: func() {},
+	}
+	but.Alignment = widget.ButtonAlignCenter
+	rightLabel := widget.NewLabel("Great Work, keep on it!")
+	rightLabel.Alignment = fyne.TextAlignCenter
+	c := container.NewVBox(but, rightLabel)
+	rightSeparator := widget.NewSeparator()
+	rightSeparator.Resize(fyne.NewSize(c.Size().Width, 10.0))
+	c.Add(rightSeparator)
+	// Todo
+	return c
 }
 
 func loadUI() fyne.CanvasObject {
@@ -264,23 +291,74 @@ func newIcon() *fyne.StaticResource {
 	}
 	iconByteSlice := make([]byte, 60000)
 	_, err = icon.Read(iconByteSlice)
+	icon.Close()
 	if err != nil {
 		fmt.Println(err)
 	}
 	return fyne.NewStaticResource("icon.jpg", iconByteSlice)
 }
 
-func main() {
-
+func mainApp() {
 	myApp = app.New()
-	currentTasks = make([]string, 0)
-
 	myApp.SetIcon(newIcon())
 
 	myWindow := myApp.NewWindow("ToDoS")
-	content := loadUI()
-
-	myWindow.SetContent(content)
+	myWindow.CenterOnScreen()
 	myWindow.Resize(fyne.NewSize(640, 480))
+	content := loadUI()
+	myWindow.SetContent(content)
+
+	myWindow.ShowAndRun()
+}
+
+func main() {
+	//fyne.Theme
+
+	currentTasks = make([]string, 0)
+
+	//welcomeScreen()
+	mainApp()
+
+}
+
+func welcomeScreen() { //wg *sync.WaitGroup) {
+	//defer wg.Done()
+
+	myApp = app.New()
+	myApp.SetIcon(newIcon())
+
+	myWindow := myApp.NewWindow("Welcome to ToDoS!!")
+	myWindow.CenterOnScreen()
+	myWindow.Resize(fyne.NewSize(640, 480))
+
+	welcomeContainer := container.NewVBox()
+
+	var name string
+	var imagePath string
+
+	welcomeForm := &widget.Form{
+
+		Items: []*widget.FormItem{
+			{Text: "Name", Widget: widget.NewEntry()},
+			{Text: "Image", Widget: widget.NewEntry()},
+		},
+		OnSubmit: func() {
+			currentUser = name
+			image, err := fyne.LoadResourceFromPath(imagePath)
+			if err != nil || imagePath == "" {
+
+				fmt.Println()
+				// image default
+
+				// Everything Related to the
+
+			}
+			userPhoto = image
+			myWindow.Close()
+			myApp.Quit()
+		},
+	}
+	welcomeContainer.Add(welcomeForm)
+	myWindow.SetContent(welcomeContainer)
 	myWindow.ShowAndRun()
 }
